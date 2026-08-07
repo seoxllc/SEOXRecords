@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — SEOX Records</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+<style>
+  /* Page-specific styles for the admin tool only */
+  .admin-shell{ min-height:100vh; display:flex; flex-direction:column; }
+  .admin-nav{
+    display:flex; align-items:center; justify-content:space-between; padding:22px var(--gutter);
+    border-bottom:1px solid var(--border);
+  }
+  .admin-main{ flex:1; padding:56px var(--gutter) 100px; }
+  .admin-wrap{ max-width:1100px; margin-inline:auto; }
+  .login-card{ max-width:380px; margin:8vh auto 0; padding:40px; }
+  .login-card .field{ margin-bottom:18px; }
+  .admin-note{
+    border:1px solid var(--border); border-radius:8px; padding:16px 18px; font-size:13px; color:var(--text-2);
+    margin-bottom:32px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .admin-note i{ margin-top:2px; color:var(--text-3); }
+  .admin-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:16px; flex-wrap:wrap; }
+  .sub-list{ display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .sub-row{ background:var(--black); }
+  .sub-row-head{
+    display:flex; justify-content:space-between; align-items:center; padding:18px 22px; cursor:pointer; gap:16px;
+  }
+  .sub-row-head:hover{ background:var(--card); }
+  .sub-row-title{ font-family:var(--f-display); font-weight:700; font-size:15px; }
+  .sub-row-meta{ font-family:var(--f-mono); font-size:11px; color:var(--text-3); text-transform:uppercase; letter-spacing:.08em; }
+  .sub-row-body{ max-height:0; overflow:hidden; transition:max-height .4s var(--ease); background:var(--card); }
+  .sub-row.is-open .sub-row-body{ max-height:600px; }
+  .sub-row-body-inner{ padding:0 22px 22px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px 24px; }
+  .sub-kv{ font-size:13px; }
+  .sub-kv .k{ font-family:var(--f-mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-3); margin-bottom:3px; }
+  .sub-kv .v{ color:var(--white); word-break:break-word; }
+  .empty-state{ text-align:center; padding:80px 20px; color:var(--text-3); }
+  @media (max-width:700px){ .sub-row-body-inner{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="admin-shell">
+  <header class="admin-nav">
+    <a href="index.html" class="nav-logo"><span class="mark"></span>SEOX RECORDS</a>
+    <div class="mono-label">Internal — Admin</div>
+  </header>
+
+  <main class="admin-main">
+    <div class="admin-wrap">
+
+      <!-- LOGIN -->
+      <div id="loginView">
+        <div class="card login-card">
+          <div class="eyebrow">Restricted</div>
+          <h1 class="h-3" style="margin-top:14px; margin-bottom:26px;">Admin Sign In</h1>
+          <form id="loginForm">
+            <div class="field">
+              <label for="user">Username</label>
+              <input id="user" type="text" autocomplete="username" required>
+            </div>
+            <div class="field">
+              <label for="pass">Password</label>
+              <input id="pass" type="password" autocomplete="current-password" required>
+            </div>
+            <p id="loginError" style="display:none; color:#fff; font-size:13px; margin:-6px 0 14px;">Incorrect username or password.</p>
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div id="dashView" style="display:none;">
+        <div class="admin-note">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div>
+            This is a lightweight, client-side gate for casual internal use — it is <strong>not real security</strong> (the password lives in this page's source). It only shows submissions made from this browser/device. For a complete, cross-device record of every submission, connect the form to an email service — see the note in <code>submission.html</code> and <code>README.md</code>.
+          </div>
+        </div>
+
+        <div class="admin-toolbar">
+          <div>
+            <div class="eyebrow">Local Submissions</div>
+            <h1 class="h-3" style="margin-top:12px;">Demo Submissions <span id="subCount" class="mono-label"></span></h1>
+          </div>
+          <div style="display:flex; gap:12px;">
+            <button id="clearBtn" class="btn btn-ghost">Clear All</button>
+            <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
+          </div>
+        </div>
+
+        <div id="subList" class="sub-list"></div>
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <i class="fa-solid fa-inbox" style="font-size:22px; margin-bottom:14px; display:block;"></i>
+          No submissions saved on this browser yet.
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // NOTE: this is a basic client-side gate, not real authentication.
+  const ADMIN_USER = "owner";
+  const ADMIN_PASS = "lowkey";
+  const SESSION_KEY = "seox_admin_session";
+
+  const loginView = document.getElementById("loginView");
+  const dashView = document.getElementById("dashView");
+  const loginForm = document.getElementById("loginForm");
+  const loginError = document.getElementById("loginError");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const clearBtn = document.getElementById("clearBtn");
+  const subList = document.getElementById("subList");
+  const subCount = document.getElementById("subCount");
+  const emptyState = document.getElementById("emptyState");
+
+  function showDashboard() {
+    loginView.style.display = "none";
+    dashView.style.display = "block";
+    renderSubmissions();
+  }
+
+  function showLogin() {
+    dashView.style.display = "none";
+    loginView.style.display = "block";
+  }
+
+  if (sessionStorage.getItem(SESSION_KEY) === "1") showDashboard();
+
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const user = document.getElementById("user").value.trim();
+    const pass = document.getElementById("pass").value;
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      loginError.style.display = "none";
+      showDashboard();
+    } else {
+      loginError.style.display = "block";
+    }
+  });
+
+  logoutBtn.addEventListener("click", () => {
+    sessionStorage.removeItem(SESSION_KEY);
+    showLogin();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    if (confirm("Remove all locally saved submissions from this browser? This cannot be undone.")) {
+      localStorage.removeItem("seox_submissions");
+      renderSubmissions();
+    }
+  });
+
+  function fieldLabel(key) {
+    return key
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function renderSubmissions() {
+    let entries = [];
+    try {
+      entries = JSON.parse(localStorage.getItem("seox_submissions") || "[]");
+    } catch (err) {
+      entries = [];
+    }
+
+    subCount.textContent = entries.length ? `(${entries.length})` : "";
+    subList.innerHTML = "";
+
+    if (!entries.length) {
+      emptyState.style.display = "block";
+      return;
+    }
+    emptyState.style.display = "none";
+
+    entries.forEach((entry) => {
+      const row = document.createElement("div");
+      row.className = "sub-row";
+
+      const primaryName =
+        entry.fields.artist_1_name || entry.fields.email || entry.fields.artist_count
+          ? entry.fields.artist_1_name || entry.fields.email
+          : "Submission";
+      const when = new Date(entry.receivedAt).toLocaleString();
+
+      const head = document.createElement("div");
+      head.className = "sub-row-head";
+      head.innerHTML = `
+        <div>
+          <div class="sub-row-title">${primaryName || "Submission"}</div>
+          <div class="sub-row-meta" style="margin-top:4px;">${when}${entry.fields.genre ? " — " + entry.fields.genre : ""}</div>
+        </div>
+        <i class="fa-solid fa-chevron-down" style="color:var(--text-3); font-size:12px;"></i>
+      `;
+
+      const body = document.createElement("div");
+      body.className = "sub-row-body";
+      const inner = document.createElement("div");
+      inner.className = "sub-row-body-inner";
+
+      Object.keys(entry.fields).forEach((key) => {
+        const kv = document.createElement("div");
+        kv.className = "sub-kv";
+        const val = Array.isArray(entry.fields[key]) ? entry.fields[key].join(", ") : entry.fields[key];
+        kv.innerHTML = `<div class="k">${fieldLabel(key)}</div><div class="v">${val || "—"}</div>`;
+        inner.appendChild(kv);
+      });
+
+      body.appendChild(inner);
+      head.addEventListener("click", () => row.classList.toggle("is-open"));
+
+      row.appendChild(head);
+      row.appendChild(body);
+      subList.appendChild(row);
+    });
+  }
+})();
+</script>
+</body>
+</html>

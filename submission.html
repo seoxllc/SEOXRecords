@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Submit Your Demo — SEOX Records</title>
+<meta name="description" content="Submit your demo to SEOX Records. We're looking for artists with originality, professionalism and long-term vision.">
+<link rel="canonical" href="https://www.seoxrecords.com/submission.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Submit Your Demo — SEOX Records">
+<meta property="og:description" content="Become part of SEOX Records. Submit your demo today.">
+<meta property="og:url" content="https://www.seoxrecords.com/submission.html">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="loader" aria-hidden="true">
+  <div class="loader-mark"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="loader-text">SEOX Records</div>
+</div>
+
+<header class="nav">
+  <a href="index.html" class="nav-logo"><span class="mark"></span>SEOX RECORDS</a>
+  <nav class="nav-links" aria-label="Primary">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="playlists.html">Playlists</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+  <div class="nav-actions">
+    <a href="submission.html" class="btn btn-primary magnetic">Submit Demo</a>
+    <button class="nav-burger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<div class="mobile-menu" aria-hidden="true">
+  <a href="index.html">Home</a>
+  <a href="about.html">About</a>
+  <a href="playlists.html">Playlists</a>
+  <a href="submission.html">Submission</a>
+  <a href="contact.html">Contact</a>
+</div>
+
+<section class="page-hero text-center" style="text-align:center;">
+  <div class="page-hero-inner">
+    <div class="eyebrow" style="justify-content:center;">Join The Roster</div>
+    <h1 class="h-display">Become Part<br>of SEOX Records</h1>
+    <p class="lede" style="margin-inline:auto;">We're always looking for artists with originality, professionalism and long-term vision.</p>
+    <div style="margin-top:40px;">
+      <a href="#form" class="btn btn-primary btn-lg magnetic">Submit Demo <i class="fa-solid fa-arrow-down"></i></a>
+    </div>
+  </div>
+</section>
+
+<!-- GUIDELINES -->
+<section class="section">
+  <div class="container">
+    <div class="section-head center reveal">
+      <div class="eyebrow" style="justify-content:center;">Before You Submit</div>
+      <h2 class="h-1" style="margin-top:18px;">Submission Guidelines.</h2>
+    </div>
+    <div class="grid grid-3" data-stagger>
+      <div class="card value-card reveal"><i class="fa-solid fa-music"></i><h4>Original Music Only</h4><p>We only accept tracks you wrote and produced yourself.</p></div>
+      <div class="card value-card reveal"><i class="fa-solid fa-shield-halved"></i><h4>No Copyright Issues</h4><p>All samples must be cleared, licensed, or entirely your own.</p></div>
+      <div class="card value-card reveal"><i class="fa-solid fa-link"></i><h4>Private Streaming Link</h4><p>Share a private, unlisted link — no download-required files.</p></div>
+      <div class="card value-card reveal"><i class="fa-solid fa-sliders"></i><h4>High Quality Mix/Master</h4><p>Send your best possible mix — we evaluate final quality closely.</p></div>
+      <div class="card value-card reveal"><i class="fa-solid fa-star"></i><h4>Unreleased Preferred</h4><p>Unreleased tracks give us the most flexibility to plan a release.</p></div>
+      <div class="card value-card reveal"><i class="fa-solid fa-tags"></i><h4>Professional Metadata</h4><p>Correct title, artist name and genre tagging speeds up review.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FORM -->
+<section class="section" style="padding-top:0;" id="form">
+  <div class="container-narrow">
+    <div class="card reveal" style="padding:clamp(28px,5vw,56px);">
+      <div class="eyebrow">Demo Submission</div>
+      <h2 class="h-2" style="margin-top:18px; margin-bottom:36px;">Tell Us About Your Music.</h2>
+
+      <!-- To receive submissions by email, replace the action URL below with your
+           own Formspree endpoint (https://formspree.io/f/xxxxxxx) — see README.md.
+           Submissions are also saved locally for review on the admin page. -->
+      <form data-form data-store="submissions" action="" method="POST">
+        <div class="form-grid">
+          <div class="field">
+            <label for="artistCount">Number of Artists</label>
+            <select id="artistCount" name="artist_count">
+              <option value="1">1 — Solo Artist</option>
+              <option value="2">2 — Duo / Collab</option>
+              <option value="3">3 — Group</option>
+              <option value="4">4 — Group</option>
+            </select>
+          </div>
+          <div class="field"><label for="email">Contact Email</label><input id="email" name="email" type="email" required></div>
+          <div class="field"><label for="country">Country</label><input id="country" name="country" type="text" required></div>
+          <div class="field">
+            <label for="genre">Genre</label>
+            <select id="genre" name="genre" required>
+              <option value="">Select a genre</option>
+              <option>Electronic</option>
+              <option>Funk</option>
+              <option>Phonk</option>
+              <option>Hardtekk</option>
+              <option>Angelcore</option>
+              <option>Melodic Techno</option>
+              <option>Future Bass</option>
+              <option>House</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- One field group per artist, generated by assets/js/main.js based on "Number of Artists" -->
+        <div data-artist-fields></div>
+
+        <div class="form-grid" style="margin-top:16px;">
+          <div class="field full"><label for="demoLink">Demo Link</label><input id="demoLink" name="demo_link" type="url" placeholder="Private streaming link" required></div>
+          <div class="field full"><label for="message">Message</label><textarea id="message" name="message" placeholder="Tell us about the track and your vision as an artist…"></textarea></div>
+          <div class="checkbox-field">
+            <input type="checkbox" id="rights" name="rights_confirmed" required>
+            <label for="rights">I confirm I own 100% rights to this music.</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top:32px;">Submit Demo <i class="fa-solid fa-arrow-right"></i></button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="index.html" class="nav-logo"><span class="mark"></span>SEOX RECORDS</a>
+        <p>A worldwide independent record label building the future of independent music.</p>
+      </div>
+      <div class="footer-col">
+        <h5>Navigate</h5>
+        <ul><li><a href="about.html">About</a></li><li><a href="playlists.html">Playlists</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h5>Label</h5>
+        <ul><li><a href="submission.html">Submission</a></li><li><a href="contact.html">Contact</a></li><li><a href="privacy.html">Privacy</a></li><li><a href="terms.html">Terms</a></li></ul>
+      </div>
+      <div class="footer-col">
+        <h5>Newsletter</h5>
+        <p style="font-size:14px;">New releases, playlist adds and label news — no more than twice a month.</p>
+        <form class="newsletter-form" data-form>
+          <input type="email" placeholder="Your email address" required aria-label="Email address">
+          <button type="submit" aria-label="Subscribe"><i class="fa-solid fa-arrow-right"></i></button>
+        </form>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© <span data-year></span> SEOX Records. All rights reserved.</div>
+      <div class="footer-legal"><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></div>
+      <div class="footer-social">
+        <a href="https://open.spotify.com/user/313ixe5jxmt7w35odziadztthidu?si=cdfd451cdc2e4077" aria-label="Spotify"><i class="fa-brands fa-spotify"></i></a>
+        <a href="https://www.instagram.com/seoxllc?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.tiktok.com/@seoxrecords?_r=1&_t=ZS-98g2QyIqHcT" aria-label="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        <a href="https://discord.gg/uhHp99ZKcp" aria-label="Discord"><i class="fa-brands fa-discord"></i></a>
+        <a href="https://youtube.com/@seoxrecordsllc?si=YpHCmqzpZ_xAcKZB" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+      </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.13/dist/lenis.min.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
