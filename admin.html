@@ -28,7 +28,17 @@
     margin-bottom:32px; display:flex; gap:12px; align-items:flex-start;
   }
   .admin-note i{ margin-top:2px; color:var(--text-3); }
+  .admin-note.is-good{ border-color:rgba(255,255,255,.18); }
+  .mode-pill{
+    display:inline-flex; align-items:center; gap:8px; font-family:var(--f-mono); font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); border:1px solid var(--border);
+    border-radius:999px; padding:6px 12px;
+  }
+  .mode-pill .dot{ width:6px; height:6px; border-radius:50%; background:var(--text-3); }
+  .mode-pill.is-cloud .dot{ background:#fff; }
   .admin-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; gap:16px; flex-wrap:wrap; }
+  .section-label{ margin:44px 0 18px; }
+  .section-label:first-child{ margin-top:0; }
   .sub-list{ display:flex; flex-direction:column; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
   .sub-row{ background:var(--black); }
   .sub-row-head{
@@ -43,7 +53,8 @@
   .sub-kv{ font-size:13px; }
   .sub-kv .k{ font-family:var(--f-mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-3); margin-bottom:3px; }
   .sub-kv .v{ color:var(--white); word-break:break-word; }
-  .empty-state{ text-align:center; padding:80px 20px; color:var(--text-3); }
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--text-3); }
+  .login-tab-note{ font-size:13px; margin-bottom:22px; }
   @media (max-width:700px){ .sub-row-body-inner{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -62,10 +73,11 @@
       <div id="loginView">
         <div class="card login-card">
           <div class="eyebrow">Restricted</div>
-          <h1 class="h-3" style="margin-top:14px; margin-bottom:26px;">Admin Sign In</h1>
+          <h1 class="h-3" style="margin-top:14px; margin-bottom:10px;">Admin Sign In</h1>
+          <p id="loginModeNote" class="login-tab-note"></p>
           <form id="loginForm">
             <div class="field">
-              <label for="user">Username</label>
+              <label id="userLabel" for="user">Username</label>
               <input id="user" type="text" autocomplete="username" required>
             </div>
             <div class="field">
@@ -80,20 +92,27 @@
 
       <!-- DASHBOARD -->
       <div id="dashView" style="display:none;">
-        <div class="admin-note">
+
+        <div id="cloudModeNote" class="admin-note is-good" style="display:none;">
+          <i class="fa-solid fa-cloud"></i>
+          <div>
+            Connected to Firestore — this list includes submissions from <strong>every visitor, on any device</strong>, not just this browser.
+          </div>
+        </div>
+        <div id="localModeNote" class="admin-note" style="display:none;">
           <i class="fa-solid fa-triangle-exclamation"></i>
           <div>
-            This is a lightweight, client-side gate for casual internal use — it is <strong>not real security</strong> (the password lives in this page's source). It only shows submissions made from this browser/device. For a complete, cross-device record of every submission, connect the form to an email service — see the note in <code>submission.html</code> and <code>README.md</code>.
+            Running in <strong>local-only mode</strong>: Firebase isn't configured yet, so this is a lightweight client-side gate (the password lives in this page's source — not real security) showing submissions saved on <strong>this browser/device only</strong>. To see every visitor's submissions from anywhere, fill in <code>assets/js/firebase-config.js</code> — see README.md ("Cloud submissions with Firebase").
           </div>
         </div>
 
         <div class="admin-toolbar">
           <div>
-            <div class="eyebrow">Local Submissions</div>
-            <h1 class="h-3" style="margin-top:12px;">Demo Submissions <span id="subCount" class="mono-label"></span></h1>
+            <span id="modePill" class="mode-pill"><span class="dot"></span><span id="modePillText">Local Only</span></span>
+            <h1 class="h-3" style="margin-top:14px;">Demo Submissions <span id="subCount" class="mono-label"></span></h1>
           </div>
           <div style="display:flex; gap:12px;">
-            <button id="clearBtn" class="btn btn-ghost">Clear All</button>
+            <button id="clearBtn" class="btn btn-ghost">Clear Local</button>
             <button id="logoutBtn" class="btn btn-ghost">Log Out</button>
           </div>
         </div>
@@ -101,7 +120,7 @@
         <div id="subList" class="sub-list"></div>
         <div id="emptyState" class="empty-state" style="display:none;">
           <i class="fa-solid fa-inbox" style="font-size:22px; margin-bottom:14px; display:block;"></i>
-          No submissions saved on this browser yet.
+          No submissions yet.
         </div>
       </div>
 
@@ -109,24 +128,84 @@
   </main>
 </div>
 
+<script src="assets/js/firebase-config.js"></script>
 <script>
 (function () {
   "use strict";
 
-  // NOTE: this is a basic client-side gate, not real authentication.
-  const ADMIN_USER = "owner";
-  const ADMIN_PASS = "lowkey";
-  const SESSION_KEY = "seox_admin_session";
+  const FIREBASE_SDK_VERSION = "10.13.0";
+
+  // Local-mode-only fallback credentials — see the admin-note in the UI.
+  const LOCAL_ADMIN_USER = "owner";
+  const LOCAL_ADMIN_PASS = "lowkey";
+  const LOCAL_SESSION_KEY = "seox_admin_session";
+
+  function isFirebaseConfigured() {
+    const cfg = window.SEOX_FIREBASE_CONFIG;
+    return !!(cfg && cfg.apiKey && !String(cfg.apiKey).startsWith("YOUR_"));
+  }
+  const cloudMode = isFirebaseConfigured();
 
   const loginView = document.getElementById("loginView");
   const dashView = document.getElementById("dashView");
   const loginForm = document.getElementById("loginForm");
   const loginError = document.getElementById("loginError");
+  const loginModeNote = document.getElementById("loginModeNote");
+  const userLabel = document.getElementById("userLabel");
+  const userInput = document.getElementById("user");
   const logoutBtn = document.getElementById("logoutBtn");
   const clearBtn = document.getElementById("clearBtn");
   const subList = document.getElementById("subList");
   const subCount = document.getElementById("subCount");
   const emptyState = document.getElementById("emptyState");
+  const cloudModeNote = document.getElementById("cloudModeNote");
+  const localModeNote = document.getElementById("localModeNote");
+  const modePillText = document.getElementById("modePillText");
+  const modePill = document.getElementById("modePill");
+
+  if (cloudMode) {
+    loginModeNote.textContent = "Sign in with the admin account you created in Firebase Authentication.";
+    userLabel.textContent = "Email";
+    userInput.type = "email";
+    userInput.autocomplete = "email";
+    clearBtn.textContent = "Clear Local Copies";
+    modePillText.textContent = "Cloud (Firestore)";
+    modePill.classList.add("is-cloud");
+    cloudModeNote.style.display = "flex";
+  } else {
+    loginModeNote.textContent = "Local-only mode — see the note below once signed in.";
+    localModeNote.style.display = "flex";
+  }
+
+  let firebaseAuthApi = null; // { auth, signInWithEmailAndPassword, onAuthStateChanged, signOut }
+  let firebaseDbApi = null; // { db, collection, getDocs, query, orderBy }
+
+  async function loadFirebase() {
+    if (!cloudMode) return null;
+    if (firebaseAuthApi && firebaseDbApi) return { firebaseAuthApi, firebaseDbApi };
+    const [{ initializeApp }, authMod, storeMod] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-auth.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`),
+    ]);
+    const app = initializeApp(window.SEOX_FIREBASE_CONFIG);
+    const auth = authMod.getAuth(app);
+    const db = storeMod.getFirestore(app);
+    firebaseAuthApi = {
+      auth,
+      signInWithEmailAndPassword: authMod.signInWithEmailAndPassword,
+      onAuthStateChanged: authMod.onAuthStateChanged,
+      signOut: authMod.signOut,
+    };
+    firebaseDbApi = {
+      db,
+      collection: storeMod.collection,
+      getDocs: storeMod.getDocs,
+      query: storeMod.query,
+      orderBy: storeMod.orderBy,
+    };
+    return { firebaseAuthApi, firebaseDbApi };
+  }
 
   function showDashboard() {
     loginView.style.display = "none";
@@ -137,98 +216,177 @@
   function showLogin() {
     dashView.style.display = "none";
     loginView.style.display = "block";
+    loginError.style.display = "none";
   }
 
-  if (sessionStorage.getItem(SESSION_KEY) === "1") showDashboard();
-
-  loginForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const user = document.getElementById("user").value.trim();
-    const pass = document.getElementById("pass").value;
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      loginError.style.display = "none";
+  async function init() {
+    if (cloudMode) {
+      const { firebaseAuthApi: authApi } = await loadFirebase();
+      authApi.onAuthStateChanged(authApi.auth, (user) => {
+        if (user) showDashboard();
+        else showLogin();
+      });
+    } else if (sessionStorage.getItem(LOCAL_SESSION_KEY) === "1") {
       showDashboard();
+    }
+  }
+  init();
+
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const user = userInput.value.trim();
+    const pass = document.getElementById("pass").value;
+    loginError.style.display = "none";
+
+    if (cloudMode) {
+      try {
+        const { firebaseAuthApi: authApi } = await loadFirebase();
+        await authApi.signInWithEmailAndPassword(authApi.auth, user, pass);
+        // onAuthStateChanged above handles showing the dashboard
+      } catch (err) {
+        loginError.textContent = "Sign-in failed — check the email/password, and that this domain is added under Authentication → Settings → Authorized domains.";
+        loginError.style.display = "block";
+      }
     } else {
-      loginError.style.display = "block";
+      if (user === LOCAL_ADMIN_USER && pass === LOCAL_ADMIN_PASS) {
+        sessionStorage.setItem(LOCAL_SESSION_KEY, "1");
+        showDashboard();
+      } else {
+        loginError.textContent = "Incorrect username or password.";
+        loginError.style.display = "block";
+      }
     }
   });
 
-  logoutBtn.addEventListener("click", () => {
-    sessionStorage.removeItem(SESSION_KEY);
-    showLogin();
+  logoutBtn.addEventListener("click", async () => {
+    if (cloudMode) {
+      const { firebaseAuthApi: authApi } = await loadFirebase();
+      await authApi.signOut(authApi.auth);
+    } else {
+      sessionStorage.removeItem(LOCAL_SESSION_KEY);
+      showLogin();
+    }
   });
 
   clearBtn.addEventListener("click", () => {
-    if (confirm("Remove all locally saved submissions from this browser? This cannot be undone.")) {
+    if (confirm("Remove locally saved submissions from THIS browser only? (Cloud submissions in Firestore are not affected.) This cannot be undone.")) {
       localStorage.removeItem("seox_submissions");
       renderSubmissions();
     }
   });
 
   function fieldLabel(key) {
-    return key
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  function renderSubmissions() {
-    let entries = [];
-    try {
-      entries = JSON.parse(localStorage.getItem("seox_submissions") || "[]");
-    } catch (err) {
-      entries = [];
-    }
+  function entryPrimaryName(fields) {
+    return fields.artist_1_name || fields.email || "Submission";
+  }
 
-    subCount.textContent = entries.length ? `(${entries.length})` : "";
-    subList.innerHTML = "";
+  function renderRow(container, { title, when, genre, fields, badge }) {
+    const row = document.createElement("div");
+    row.className = "sub-row";
 
-    if (!entries.length) {
-      emptyState.style.display = "block";
-      return;
-    }
-    emptyState.style.display = "none";
+    const head = document.createElement("div");
+    head.className = "sub-row-head";
+    head.innerHTML = `
+      <div>
+        <div class="sub-row-title">${title}${badge ? ` <span class="mono-label" style="margin-left:8px;">${badge}</span>` : ""}</div>
+        <div class="sub-row-meta" style="margin-top:4px;">${when}${genre ? " — " + genre : ""}</div>
+      </div>
+      <i class="fa-solid fa-chevron-down" style="color:var(--text-3); font-size:12px;"></i>
+    `;
 
-    entries.forEach((entry) => {
-      const row = document.createElement("div");
-      row.className = "sub-row";
+    const body = document.createElement("div");
+    body.className = "sub-row-body";
+    const inner = document.createElement("div");
+    inner.className = "sub-row-body-inner";
 
-      const primaryName =
-        entry.fields.artist_1_name || entry.fields.email || entry.fields.artist_count
-          ? entry.fields.artist_1_name || entry.fields.email
-          : "Submission";
-      const when = new Date(entry.receivedAt).toLocaleString();
-
-      const head = document.createElement("div");
-      head.className = "sub-row-head";
-      head.innerHTML = `
-        <div>
-          <div class="sub-row-title">${primaryName || "Submission"}</div>
-          <div class="sub-row-meta" style="margin-top:4px;">${when}${entry.fields.genre ? " — " + entry.fields.genre : ""}</div>
-        </div>
-        <i class="fa-solid fa-chevron-down" style="color:var(--text-3); font-size:12px;"></i>
-      `;
-
-      const body = document.createElement("div");
-      body.className = "sub-row-body";
-      const inner = document.createElement("div");
-      inner.className = "sub-row-body-inner";
-
-      Object.keys(entry.fields).forEach((key) => {
-        const kv = document.createElement("div");
-        kv.className = "sub-kv";
-        const val = Array.isArray(entry.fields[key]) ? entry.fields[key].join(", ") : entry.fields[key];
-        kv.innerHTML = `<div class="k">${fieldLabel(key)}</div><div class="v">${val || "—"}</div>`;
-        inner.appendChild(kv);
-      });
-
-      body.appendChild(inner);
-      head.addEventListener("click", () => row.classList.toggle("is-open"));
-
-      row.appendChild(head);
-      row.appendChild(body);
-      subList.appendChild(row);
+    Object.keys(fields).forEach((key) => {
+      const kv = document.createElement("div");
+      kv.className = "sub-kv";
+      const val = Array.isArray(fields[key]) ? fields[key].join(", ") : fields[key];
+      kv.innerHTML = `<div class="k">${fieldLabel(key)}</div><div class="v">${val || "—"}</div>`;
+      inner.appendChild(kv);
     });
+
+    body.appendChild(inner);
+    head.addEventListener("click", () => row.classList.toggle("is-open"));
+    row.appendChild(head);
+    row.appendChild(body);
+    container.appendChild(row);
+  }
+
+  async function renderSubmissions() {
+    subList.innerHTML = "";
+    let total = 0;
+
+    // Cloud submissions (every visitor, every device)
+    if (cloudMode) {
+      try {
+        const { firebaseDbApi: dbApi } = await loadFirebase();
+        const q = dbApi.query(dbApi.collection(dbApi.db, "submissions"), dbApi.orderBy("receivedAt", "desc"));
+        const snap = await dbApi.getDocs(q);
+        if (!snap.empty) {
+          const cloudHeading = document.createElement("div");
+          cloudHeading.className = "eyebrow section-label";
+          cloudHeading.textContent = `Cloud Submissions (${snap.size})`;
+          subList.parentNode.insertBefore(cloudHeading, subList);
+
+          snap.forEach((doc) => {
+            const data = doc.data();
+            const fields = data.fields || {};
+            const when = data.receivedAt && data.receivedAt.toDate ? data.receivedAt.toDate().toLocaleString() : "—";
+            renderRow(subList, {
+              title: entryPrimaryName(fields),
+              when,
+              genre: fields.genre,
+              fields,
+              badge: "Cloud",
+            });
+            total++;
+          });
+        }
+      } catch (err) {
+        console.warn("Could not load Firestore submissions:", err);
+        const errNote = document.createElement("div");
+        errNote.className = "admin-note";
+        errNote.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i><div>Couldn't load cloud submissions. Check your Firestore security rules allow reads for signed-in users (see README.md).</div>`;
+        subList.parentNode.insertBefore(errNote, subList);
+      }
+    }
+
+    // Local submissions (this browser only)
+    let local = [];
+    try {
+      local = JSON.parse(localStorage.getItem("seox_submissions") || "[]");
+    } catch (err) {
+      local = [];
+    }
+    if (local.length) {
+      const localHeading = document.createElement("div");
+      localHeading.className = "eyebrow section-label";
+      localHeading.textContent = `Local Copies On This Device (${local.length})`;
+      subList.parentNode.insertBefore(localHeading, subList.nextSibling);
+
+      const localList = document.createElement("div");
+      localList.className = "sub-list";
+      localList.style.marginTop = "18px";
+      local.forEach((entry) => {
+        renderRow(localList, {
+          title: entryPrimaryName(entry.fields),
+          when: new Date(entry.receivedAt).toLocaleString(),
+          genre: entry.fields.genre,
+          fields: entry.fields,
+          badge: cloudMode ? "Local" : null,
+        });
+        total++;
+      });
+      subList.parentNode.insertBefore(localList, emptyState);
+    }
+
+    subCount.textContent = total ? `(${total})` : "";
+    emptyState.style.display = total ? "none" : "block";
   }
 })();
 </script>
