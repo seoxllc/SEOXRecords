@@ -10,6 +10,41 @@
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   /* ---------------------------------------------------------------------
+     Firebase (optional) — lazy-loaded only if assets/js/firebase-config.js
+     has been filled in with real project values. See that file and
+     README.md ("Cloud submissions with Firebase") for setup.
+     --------------------------------------------------------------------- */
+  const FIREBASE_SDK_VERSION = "10.13.0";
+  let _firebasePromise = null;
+
+  function isFirebaseConfigured() {
+    const cfg = window.SEOX_FIREBASE_CONFIG;
+    return !!(cfg && cfg.apiKey && !String(cfg.apiKey).startsWith("YOUR_"));
+  }
+
+  // Returns { app, db, firestore } once ready, or null if not configured.
+  // Safe to call many times — the import + init only happens once.
+  window.seoxGetFirebase = function seoxGetFirebase() {
+    if (!isFirebaseConfigured()) return Promise.resolve(null);
+    if (_firebasePromise) return _firebasePromise;
+    _firebasePromise = (async () => {
+      try {
+        const [{ initializeApp }, firestore] = await Promise.all([
+          import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-app.js`),
+          import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-firestore.js`),
+        ]);
+        const app = initializeApp(window.SEOX_FIREBASE_CONFIG);
+        const db = firestore.getFirestore(app);
+        return { app, db, firestore };
+      } catch (err) {
+        console.warn("Firebase failed to load — falling back to local-only storage.", err);
+        return null;
+      }
+    })();
+    return _firebasePromise;
+  };
+
+  /* ---------------------------------------------------------------------
      Loader
      --------------------------------------------------------------------- */
   window.addEventListener("load", () => {
@@ -265,18 +300,24 @@
   /* ---------------------------------------------------------------------
      Form handling (submission / contact / newsletter)
 
-     Two delivery paths, both optional and safe to combine:
+     Three delivery paths, all optional and safe to combine:
 
      1) EMAIL — if the <form> has a real "action" URL (e.g. a Formspree
         endpoint: https://formspree.io/f/xxxxxxx), the form POSTs there so
-        the submission arrives by email. Until you add a real endpoint the
-        form simply falls back to the local save below.
+        the submission arrives by email.
 
-     2) LOCAL ADMIN COPY — if the <form> has [data-store="submissions"],
-        every submission is also saved to this browser's localStorage so
-        it shows up on admin.html. This only works on the same browser/
-        device the form was submitted from — it is a convenience for
-        testing, NOT a substitute for the email path above. See README.md.
+     2) FIREBASE (recommended for a real admin page) — if
+        assets/js/firebase-config.js has been filled in with a real
+        project, every submission is written to Firestore, so it shows up
+        on admin.html for YOU, signed in, from any device — regardless of
+        which visitor/browser/device submitted it.
+
+     3) LOCAL ADMIN COPY — always saved to this browser's localStorage as
+        well (when the form has [data-store="submissions"]). This is only
+        visible on admin.html on the SAME browser/device the form was
+        filled in on — useful for quick testing, not a substitute for
+        Firebase if you actually need to see visitors' submissions.
+        See README.md ("Cloud submissions with Firebase") for setup.
      --------------------------------------------------------------------- */
   document.querySelectorAll("form[data-form]").forEach((form) => {
     form.addEventListener("submit", async (e) => {
@@ -292,6 +333,12 @@
       const action = form.getAttribute("action");
       const hasRealEndpoint = action && action.trim() !== "" && action.trim() !== "#";
 
+      const fields = {};
+      formData.forEach((value, key) => {
+        if (fields[key]) fields[key] = [].concat(fields[key], value);
+        else fields[key] = value;
+      });
+
       // 1) Try emailing out via the form's action endpoint (e.g. Formspree)
       if (hasRealEndpoint) {
         try {
@@ -301,21 +348,29 @@
             headers: { Accept: "application/json" },
           });
         } catch (err) {
-          // fails silently — local save below still preserves the submission
+          // fails silently — the other paths below still preserve the submission
         }
       }
 
-      // 2) Save a local copy for the admin page
       if (form.dataset.store === "submissions") {
+        // 2) Sync to Firestore, if configured — this is what makes
+        //    submissions visible on admin.html from ANY visitor/device.
         try {
-          const entry = { id: Date.now(), receivedAt: new Date().toISOString(), fields: {} };
-          formData.forEach((value, key) => {
-            if (entry.fields[key]) {
-              entry.fields[key] = [].concat(entry.fields[key], value);
-            } else {
-              entry.fields[key] = value;
-            }
-          });
+          const fb = await window.seoxGetFirebase();
+          if (fb) {
+            const { collection, addDoc, serverTimestamp } = fb.firestore;
+            await addDoc(collection(fb.db, "submissions"), {
+              fields,
+              receivedAt: serverTimestamp(),
+            });
+          }
+        } catch (err) {
+          console.warn("Firestore sync failed — submission still saved locally.", err);
+        }
+
+        // 3) Always also keep a local copy (same-device convenience/testing)
+        try {
+          const entry = { id: Date.now(), receivedAt: new Date().toISOString(), fields };
           const existing = JSON.parse(localStorage.getItem("seox_submissions") || "[]");
           existing.unshift(entry);
           localStorage.setItem("seox_submissions", JSON.stringify(existing));
